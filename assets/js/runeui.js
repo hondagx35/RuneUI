@@ -1225,8 +1225,13 @@ function parseResponse(options) {
                 } else if (inputArr.album !== '') {
                     content = '<li id="db-' + (i + 1) + '" class="db-folder db-album" data-path="';
                     content += inputArr.album.replace(/\"/g,'&quot;');
+                    content += ' - Artist/';
+                    content += inputArr.artist;
                     content += '"><i class="fa fa-bars db-action" title="Actions" data-toggle="context" data-target="#context-menu-album"></i><span><i class="fa fa-dot-circle-o"></i>';
                     content += inputArr.album;
+                    content += ' ( ';
+                    content += inputArr.artist;
+                    content += ' )';
                     content += '</span></li>';
                 }
             } else if (GUI.browsemode === 'artist') {

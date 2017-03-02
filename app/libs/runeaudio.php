@@ -587,9 +587,15 @@ function browseDB($sock,$browsemode,$query) {
             break;
 		case 'album':
             if (isset($query) && !empty($query)){
-                sendMpdCommand($sock,'find "album" "'.html_entity_decode($query).'"');
+                $search = explode(' - Artist/', html_entity_decode($query));
+                if (isset($search[1]) && !empty($search[1])){
+                    sendMpdCommand($sock,'find "album" "'.$search[0].'" Artist "'.$search[1].'"');
+                } else {
+                    sendMpdCommand($sock,'find "album" "'.$search[0].'"');
+                }
             } else {
-                sendMpdCommand($sock,'list "album"');
+                //sendMpdCommand($sock,'list "album"');
+                sendMpdCommand($sock,'list "album" group "albumartist"');
 			}
             break;
 		case 'artist':
@@ -662,15 +668,24 @@ function addToQueue($sock, $path, $addplay = null, $pos = null, $clear = null)
 
 function addAlbumToQueue($sock, $path, $addplay = null, $pos = null, $clear = null)
 {
+    $search = explode(' - Artist/', html_entity_decode($path));
     if (isset($addplay)) {
         $cmdlist = "command_list_begin\n";
         $cmdlist .= (isset($clear)) ? "clear\n" : "";               // add clear call if needed
-        $cmdlist .= "findadd \"album\" \"".html_entity_decode($path)."\"\n";
+        if (isset($search[1]) && !empty($search[1])){
+            $cmdlist .= "findadd \"album\" \"".$search[0]."\" \"artist\" \"".$search[1]."\"\n";
+        } else {
+            $cmdlist .= "findadd \"album\" \"".$search[0]."\"\n";
+        }
         $cmdlist .= (isset($addplay)) ? "play ".$pos."\n" : "";     // add play call if needed
         $cmdlist .= "command_list_end";
         sendMpdCommand($sock, $cmdlist);
     } else {
-        sendMpdCommand($sock, "findadd \"album\" \"".html_entity_decode($path)."\"");
+        if (isset($search[1]) && !empty($search[1])){
+            sendMpdCommand($sock, "findadd \"album\" \"".$search[0]."\" \"artist\" \"".$search[1]."\"");
+        } else {
+            sendMpdCommand($sock, "findadd \"album\" \"".$search[0]."\"");
+        }
     }
 }
 
@@ -821,6 +836,7 @@ function _parseFileListResponse($resp)
         $plistLine = strtok($resp, "\n");
         // $plistFile = "";
         $plCounter = -1;
+        $albummode = FALSE;
         $browseMode = TRUE;
         while ($plistLine) {
             if (!strpos($plistLine,'@eaDir') && !strpos($plistLine,'.Trash')) list ($element, $value) = explode(': ', $plistLine, 2);
@@ -842,11 +858,14 @@ function _parseFileListResponse($resp)
                 if ( $element === 'Album' ) {
                     $plCounter++;
                     $plistArray[$plCounter]['album'] = $value;
+                    $albummode = TRUE;
                 } elseif ( $element === 'Artist' ) {
                     $plCounter++;
                     $plistArray[$plCounter]['artist'] = $value;
                 } elseif ( $element === 'AlbumArtist' ) {
-                    $plCounter++;
+                    if (!$albummode) {
+                        $plCounter++;
+                    }
                     $plistArray[$plCounter]['artist'] = $value;
                 } elseif ( $element === 'Composer' ) {
                     $plCounter++;
